@@ -1,0 +1,14 @@
+.vscode/
+
+rvemu
+
+*.d
+*.o
+a.out
+
+*.elf
+*.bin
+*.hex
+*.dump
+
+*.txt
