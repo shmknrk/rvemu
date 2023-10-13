@@ -8,8 +8,10 @@
 struct Machine {
     RAM      ram    ;
 
+    struct _reg {
+        uintx_t pc;
+    } r;
     uintx_t  pc     ;
-    uintx_t  npc    ;
     uint32_t ir     ;
     uintx_t  reg[32];
 
@@ -36,8 +38,15 @@ struct Machine {
     int eval();
 
     // Debug
+    bool       is_compressed;
+    uint16_t   cir          ; // compressed instruction register
+    const char *instr       ;
+    const char *cinstr      ;
+
+#if defined(TRACE_RF)
     FILE *fp;
     void dump_regs();
+#endif
 };
 
 #endif // MACHINE_H_
