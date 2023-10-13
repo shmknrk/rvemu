@@ -1,7 +1,7 @@
 # RVEmu
 
 - RISC-V Emulator written in C++
-- RV32I
+- RV32IC
 
 ## Installation
 
@@ -9,10 +9,8 @@
 $ git clone https://github.com/shmknrk/rvemu.git
 $ cd rvemu
 $ git submodule update --init --recursive
-$ echo 'export PATH="/path/to/riscv-gnu-toolchain:$PATH"' >> ~/.bashrc
+$ echo 'export RISCV="/path/to/riscv"' >> ~/.bashrc
 $ source ~/.bashrc
-$ make -C prog/riscv-tests
-$ make -C prog/coremark
 ```
 
 ## Usage
@@ -31,4 +29,13 @@ $ make isa
 
 ### coremark
 $ make coremark
+
+### embench
+$ make aha-mont64
+$ make crc32
+...
+$ make wikisort
+
+### all embench-iot
+$ make embench
 ```
