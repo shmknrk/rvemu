@@ -109,7 +109,8 @@ rv32ui_tests        := \
 	sll slli srl srli sra srai slt slti sltiu sltu \
 	beq bge bgeu blt bltu bne jal jalr \
 	sb sh sw lb lbu lh lhu lw \
-	auipc lui
+	auipc lui \
+	fence_i ma_data
 
 rv32um_tests        := \
 	mul mulh mulhsu mulhu \
