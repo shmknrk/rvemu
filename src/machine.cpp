@@ -94,7 +94,6 @@ int Machine::eval() {
     uintx_t data  ;
 
     switch (opcode_1_0) {
-#if defined(USE_COMPRESSED)
     case 0b00: // Quadrant 0
         rd     = 0x8 | ((ir >> 2 ) & 0x7); // ir[4:2] + 8
         rs1    = 0x8 | ((ir >> 7 ) & 0x7); // ir[9:7] + 8
@@ -378,7 +377,6 @@ int Machine::eval() {
             break;
         }
         break; // Quadrant 2
-#endif // USE_COMPRESSED
     case 0b11:
         switch (opcode_6_2) {
         case 0b00000: // load
@@ -447,7 +445,7 @@ int Machine::eval() {
                 if ((imm & ~(XLEN-1))!=0) {
                     goto illegal_instr;
                 }
-                data  = reg[rs1] << (imm & (XLEN - 1));
+                data  = reg[rs1] << (imm & (XLEN-1));
                 instr = "slli";
                 break;
             case 0b010: // slti
@@ -467,10 +465,10 @@ int Machine::eval() {
                     goto illegal_instr;
                 }
                 if (imm & 0x400) { // srai
-                    data  = (intx_t)reg[rs1] >> (imm & (XLEN - 1));
+                    data  = (intx_t)reg[rs1] >> (imm & (XLEN-1));
                     instr = "srai";
                 } else { // srli
-                    data  = (intx_t)((uintx_t)reg[rs1] >> (imm & (XLEN - 1)));
+                    data  = (intx_t)((uintx_t)reg[rs1] >> (imm & (XLEN-1)));
                     instr = "srli";
                 }
                 break;
@@ -492,55 +490,115 @@ int Machine::eval() {
             r.pc = pc+4;
             break; // op-imm
         case 0b01100: // op
-            if ((funct7 & ~0x20)!=0) {
+            if ((funct7 & ~0x21)!=0) {
                 goto illegal_instr;
             }
-            switch (funct3) {
-            case 0b000: // add/sub
-                if (funct7 & 0x20) { // sub
-                    data  = reg[rs1] - reg[rs2];
-                    instr = "sub";
-                } else { // add
-                    data  = reg[rs1] + reg[rs2];
-                    instr = "add";
+            if (funct7 & 0x01) {
+                switch (funct3) {
+                case 0b000: // mul
+                    data  = (uintx_t)((intx_t)reg[rs1] * (intx_t)reg[rs2]);
+                    instr = "mul";
+                    break;
+                case 0b001: // mulh
+                    data  = (uintx_t)(((int2x_t)(intx_t)reg[rs1] * (int2x_t)(intx_t)reg[rs2]) >> XLEN);
+                    instr = "mulh";
+                    break;
+                case 0b010: // mulhsu
+                    data  = (uintx_t)(((int2x_t)(intx_t)reg[rs1] * (int2x_t)(uintx_t)reg[rs2]) >> XLEN);
+                    instr = "mulhsu";
+                    break;
+                case 0b011: // mulhu
+                    data  = (uintx_t)(((int2x_t)(uintx_t)reg[rs1] * (int2x_t)(uintx_t)reg[rs2]) >> XLEN);
+                    instr = "mulhu";
+                    break;
+                case 0b100: // div
+                    if (reg[rs2]==0) {
+                        data = -1;
+                    } else if ((reg[rs1]==(uintx_t)1 << (XLEN-1)) && ((intx_t)reg[rs2]==-1)) {
+                        data = reg[rs1];
+                    } else {
+                        data = (intx_t)reg[rs1] / (intx_t)reg[rs2];
+                    }
+                    instr = "div";
+                    break;
+                case 0b101: // divu
+                    if (reg[rs2]==0) {
+                        data = -1;
+                    } else {
+                        data = reg[rs1] / reg[rs2];
+                    }
+                    instr = "divu";
+                    break;
+                case 0b110: // rem
+                    if (reg[rs2]==0) {
+                        data = reg[rs1];
+                    } else if ((reg[rs1]==(uintx_t)1 << (XLEN-1)) && ((intx_t)reg[rs2]==-1)) {
+                        data = 0;
+                    } else {
+                        data = (intx_t)reg[rs1] % (intx_t)reg[rs2];
+                    }
+                    instr = "rem";
+                    break;
+                case 0b111: // remu
+                    if (reg[rs2]==0) {
+                        data = reg[rs1];
+                    } else {
+                        data = reg[rs1] % reg[rs2];
+                    }
+                    instr = "remu";
+                    break;
+                default:
+                    goto illegal_instr;
+                    break;
                 }
-                break;
-            case 0b001: // sll
-                data  = reg[rs1] << (reg[rs2] & (XLEN - 1));
-                instr = "sll";
-                break;
-            case 0b010: // slt
-                data  = (intx_t)reg[rs1] < (intx_t)reg[rs2];
-                instr = "slt";
-                break;
-            case 0b011: // sltu
-                data  = reg[rs1] < reg[rs2];
-                instr = "sltu";
-                break;
-            case 0b100: // xor
-                data  = reg[rs1] ^ reg[rs2];
-                instr = "xor";
-                break;
-            case 0b101: // srl/sra
-                if (funct7 & 0x20) { // sra
-                    data  = (intx_t)reg[rs1] >> (reg[rs2] & (XLEN - 1));
-                    instr = "sra";
-                } else { // srl
-                    data  = (intx_t)((uintx_t)reg[rs1] >> (reg[rs2] & (XLEN - 1)));
-                    instr = "srl";
+            } else {
+                switch (funct3) {
+                case 0b000: // add/sub
+                    if (funct7 & 0x20) { // sub
+                        data  = reg[rs1] - reg[rs2];
+                        instr = "sub";
+                    } else { // add
+                        data  = reg[rs1] + reg[rs2];
+                        instr = "add";
+                    }
+                    break;
+                case 0b001: // sll
+                    data  = reg[rs1] << (reg[rs2] & (XLEN-1));
+                    instr = "sll";
+                    break;
+                case 0b010: // slt
+                    data  = (intx_t)reg[rs1] < (intx_t)reg[rs2];
+                    instr = "slt";
+                    break;
+                case 0b011: // sltu
+                    data  = reg[rs1] < reg[rs2];
+                    instr = "sltu";
+                    break;
+                case 0b100: // xor
+                    data  = reg[rs1] ^ reg[rs2];
+                    instr = "xor";
+                    break;
+                case 0b101: // srl/sra
+                    if (funct7 & 0x20) { // sra
+                        data  = (intx_t)reg[rs1] >> (reg[rs2] & (XLEN-1));
+                        instr = "sra";
+                    } else { // srl
+                        data  = reg[rs1] >> (reg[rs2] & (XLEN-1));
+                        instr = "srl";
+                    }
+                    break;
+                case 0b110: // or
+                    data  = reg[rs1] | reg[rs2];
+                    instr = "or";
+                    break;
+                case 0b111: // and
+                    data  = reg[rs1] & reg[rs2];
+                    instr = "and";
+                    break;
+                default:
+                    goto illegal_instr;
+                    break;
                 }
-                break;
-            case 0b110: // or
-                data  = reg[rs1] | reg[rs2];
-                instr = "or";
-                break;
-            case 0b111: // and
-                data  = reg[rs1] & reg[rs2];
-                instr = "and";
-                break;
-            default:
-                goto illegal_instr;
-                break;
             }
             if (rd!=0) {
                 reg[rd] = data;

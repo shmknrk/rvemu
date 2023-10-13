@@ -6,10 +6,7 @@
 
 #if !defined(XLEN)
 #define XLEN 32
-#endif
-
-#if !defined(USE_COMPRESSED)
-#define USE_COMPRESSED
+//#define XLEN 64
 #endif
 
 //------------------------------------------------------------------------------
@@ -40,12 +37,19 @@
 //==============================================================================
 #include <cstdint>
 
+typedef unsigned __int128 uint128_t;
+typedef          __int128  int128_t;
+
 #if   XLEN == 32
-typedef uint32_t uintx_t;
-typedef int32_t  intx_t ;
+typedef uint32_t  uintx_t ;
+typedef int32_t   intx_t  ;
+typedef uint64_t  uint2x_t;
+typedef int64_t   int2x_t ;
 #elif XLEN == 64
-typedef uint64_t uintx_t;
-typedef int64_t  intx_t ;
+typedef uint64_t  uintx_t ;
+typedef int64_t   intx_t  ;
+typedef uint128_t uint2x_t;
+typedef int128_t  int2x_t ;
 #else
 #error unsupported XLEN
 #endif

@@ -2,7 +2,8 @@
 # Config
 #-------------------------------------------------------------------------------
 XLEN                := 32
-#USE_COMPRESSED      := 1
+USE_MULDIV          := 1
+USE_COMPRESSED      := 1
 
 #TRACE_RF            := 1
 #TRACE_RF_FILE       := trace_rf.txt
@@ -10,6 +11,9 @@ XLEN                := 32
 
 #-------------------------------------------------------------------------------
 ARCH                := rv$(XLEN)i
+ifdef USE_MULDIV
+ARCH                := $(addsuffix m, $(ARCH))
+endif
 ifdef USE_COMPRESSED
 ARCH                := $(addsuffix c, $(ARCH))
 endif
@@ -41,10 +45,6 @@ CXXFLAGS            += -MD
 
 ifdef XLEN
 CXXFLAGS            += -DXLEN=$(XLEN)
-endif
-
-ifdef USE_COMPRESSED
-CXXFLAGS            += -DUSE_COMPRESSED=$(USE_COMPRESSED)
 endif
 
 ifdef TRACE_RF
@@ -98,11 +98,17 @@ rv32ui_tests        := \
 	sb sh sw lb lbu lh lhu lw \
 	auipc lui
 
+rv32um_tests        := \
+	mul mulh mulhsu mulhu \
+	div divu \
+	rem remu
+
 rv32uc_tests        := \
 	rvc
 
 .PHONY: isa
 isa: rv32ui_test
+isa: rv32um_test
 isa: rv32uc_test
 
 # $(eval $(call riscv-tests-template,TVM))
@@ -127,6 +133,7 @@ $$($1_tests): %: $1-p-%
 endef
 
 $(eval $(call riscv-tests-template,rv32ui))
+$(eval $(call riscv-tests-template,rv32um))
 $(eval $(call riscv-tests-template,rv32uc))
 
 #===============================================================================

@@ -30,7 +30,7 @@ include $(src_dir)/rv64mi/Makefrag
 include $(src_dir)/rv64mzicbo/Makefrag
 endif
 
-default: all
+default: rv32ui rv32um rv32uc
 
 #-------------------------------------------------------------------------------
 # Build rules
