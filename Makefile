@@ -3,16 +3,29 @@
 #-------------------------------------------------------------------------------
 XLEN                := 32
 USE_MULDIV          := 1
+USE_ATOMIC          := 1
 USE_COMPRESSED      := 1
 
 #TRACE_RF            := 1
 #TRACE_RF_FILE       := trace_rf.txt
 #DEBUG               := 1
+#-----------------------------------------------------------------------------------#
+# Format of TRACE_RF_FILE                                                           #
+#-----------------------------------------------------------------------------------#
+# count pc ir                             | count pc ir                             #
+# zero  ra   sp   gp   tp   t0   t1   t2  |  x0   x1   x2   x3   x4   x5   x6   x7  #
+#  s0   s1   a0   a1   a2   a3   a4   a5  |  x8   x9   x10  x11  x12  x13  x14  x15 #
+#  a6   a7   s2   s3   s4   s5   s6   s7  |  x16  x17  x18  x19  x20  x21  x22  x23 #
+#  s8   s9   s10  s11  t3   t4   t5   t6  |  x24  x25  x26  x27  x28  x29  x30  x31 #
+#-----------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------
 ARCH                := rv$(XLEN)i
 ifdef USE_MULDIV
 ARCH                := $(addsuffix m, $(ARCH))
+endif
+ifdef USE_ATOMIC
+ARCH                := $(addsuffix a, $(ARCH))
 endif
 ifdef USE_COMPRESSED
 ARCH                := $(addsuffix c, $(ARCH))
@@ -103,12 +116,17 @@ rv32um_tests        := \
 	div divu \
 	rem remu
 
+rv32ua_tests = \
+	amoadd_w amoand_w amomax_w amomaxu_w amomin_w amominu_w amoor_w amoxor_w amoswap_w \
+	lrsc
+
 rv32uc_tests        := \
 	rvc
 
 .PHONY: isa
 isa: rv32ui_test
 isa: rv32um_test
+isa: rv32ua_test
 isa: rv32uc_test
 
 # $(eval $(call riscv-tests-template,TVM))
@@ -134,6 +152,7 @@ endef
 
 $(eval $(call riscv-tests-template,rv32ui))
 $(eval $(call riscv-tests-template,rv32um))
+$(eval $(call riscv-tests-template,rv32ua))
 $(eval $(call riscv-tests-template,rv32uc))
 
 #===============================================================================

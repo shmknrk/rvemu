@@ -11,9 +11,10 @@ struct Machine {
     struct _reg {
         uintx_t pc;
     } r;
-    uintx_t  pc     ;
-    uint32_t ir     ;
-    uintx_t  reg[32];
+    uintx_t  pc      ;
+    uint32_t ir      ;
+    uintx_t  reg[32] ;
+    uintx_t  load_res;
 
     uint8_t  halt   ;
     uint32_t cycle  ;

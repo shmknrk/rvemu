@@ -10,6 +10,8 @@ Machine::Machine(const char *memfile) {
     r.pc  = RESET_VECTOR;
     cycle = 0;
 
+    char_size = 0;
+
 #if defined(TRACE_RF)
     if ((fp = fopen(TRACE_RF_FILE, "w"))==NULL) {
         fprintf(stderr, "Error: trace rf file cannot be opened.\n");
@@ -87,6 +89,7 @@ int Machine::eval() {
     uint8_t funct7     = ((ir >> 25) & 0x7f); // ir[31:25]
 
     uint8_t funct2;
+    uint8_t funct5;
     uint8_t cond  ;
     uintx_t imm   ;
     uintx_t uimm  ;
@@ -676,6 +679,92 @@ int Machine::eval() {
             r.pc  = pc + imm;
             instr = "jal";
             break; // jal
+        case 0b00011: // misc-mem
+            switch (funct3) {
+            case 0b000: // fence
+                break;
+            case 0b001: // fence.i
+                break;
+            default:
+                goto illegal_instr;
+                break;
+            }
+            r.pc = pc+4;
+            break;
+        case 0b01011: // amo
+                funct5 = ((ir >> 27) & 0x1f); // ir[31:27]
+                addr   = reg[rs1];
+                switch (funct3) {
+                case 0b010: // amo.w
+                    data = target_read_uint32(addr);
+                    switch (funct5) {
+                    case 0b00010: // lr.w
+                        if (rs2!=0) {
+                            goto illegal_instr;
+                        }
+                        load_res = addr  ;
+                        instr    = "lr.w";
+                        break;
+                    case 0b00011: // sc.w
+                        if (addr==load_res) {
+                            target_write_uint32(addr, reg[rs2]);
+                            load_res = 0;
+                            data     = 0;
+                        } else {
+                            data = 1;
+                        }
+                        instr = "sc.w";
+                        break;
+                    case 0b00001: // amoswap.w
+                        target_write_uint32(addr,        reg[rs2]);
+                        instr = "amoswap.w";
+                        break;
+                    case 0b00000: // amoadd.w
+                        target_write_uint32(addr, data + reg[rs2]);
+                        instr = "amoadd.w";
+                        break;
+                    case 0b00100: // amoxor.w
+                        target_write_uint32(addr, data ^ reg[rs2]);
+                        instr = "amoxor.w";
+                        break;
+                    case 0b01100: // amoand.w
+                        target_write_uint32(addr, data & reg[rs2]);
+                        instr = "amoand.w";
+                        break;
+                    case 0b01000: // amoor.w
+                        target_write_uint32(addr, data | reg[rs2]);
+                        instr = "amoor.w";
+                        break;
+                    case 0b10000: // amomin.w
+                        target_write_uint32(addr, ((intx_t)data < (intx_t)reg[rs2]) ? data : reg[rs2]);
+                        instr = "amomin.w";
+                        break;
+                    case 0b10100: // amomax.w
+                        target_write_uint32(addr, ((intx_t)data > (intx_t)reg[rs2]) ? data : reg[rs2]);
+                        instr = "amomax.w";
+                        break;
+                    case 0b11000: // amominu.w
+                        target_write_uint32(addr, ((uintx_t)data < (uintx_t)reg[rs2]) ? data : reg[rs2]);
+                        instr = "amominu.w";
+                        break;
+                    case 0b11100: // amomaxu.w
+                        target_write_uint32(addr, ((uintx_t)data > (uintx_t)reg[rs2]) ? data : reg[rs2]);
+                        instr = "amomaxu.w";
+                        break;
+                    default:
+                        goto illegal_instr;
+                        break;
+                    }
+                    break;
+                default:
+                    goto illegal_instr;
+                    break;
+                }
+                if (rd!=0) {
+                    reg[rd] = (intx_t)data;
+                }
+                r.pc = pc+4;
+            break;
         default:
             goto illegal_instr;
             break;
