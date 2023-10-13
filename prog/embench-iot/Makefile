@@ -91,6 +91,7 @@ build: $(CONFIG_DIR)/$(ARCH)
 	--user-libs="-lm" \
 	--builddir $(BUILD_DIR) \
 	--logdir $(LOG_DIR)
+	@rm -rf $(CONFIG_DIR)/$(ARCH)
 
 $(CONFIG_DIR)/$(ARCH):
 	cp -r $(ARCH) $(EMBENCH_DIR)/config
