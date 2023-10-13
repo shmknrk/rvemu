@@ -150,6 +150,5 @@ portable_init(core_portable *p, int *argc, char *argv[])
 void
 portable_fini(core_portable *p)
 {
-    *TOHOST_ADDR   = 2 << 16;
     p->portable_id = 0;
 }

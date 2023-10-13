@@ -23,7 +23,6 @@ Original Author: Shay Gal-on
 #define CORE_PORTME_H
 
 static volatile unsigned int *MTIME_ADDR  = (unsigned int*)0x20000000;
-static volatile unsigned int *TOHOST_ADDR = (unsigned int*)0x40008000;
 
 /************************/
 /* Data types and settings */

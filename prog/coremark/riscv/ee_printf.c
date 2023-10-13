@@ -659,11 +659,7 @@ ee_vsprintf(char *buf, const char *fmt, va_list args)
     return str - buf;
 }
 
-void
-uart_send_char(char c)
-{
-    *TOHOST_ADDR = (1 << 16) | c;
-}
+extern void uart_send_char(char c);
 
 int
 ee_printf(const char *fmt, ...)
