@@ -875,52 +875,116 @@ int Machine::eval() {
                         instr = "sc.w";
                         break;
                     case 0b00001: // amoswap.w
-                        target_write_uint32(addr,        reg[rs2]);
+                        target_write_uint32(addr,                 (int32_t)reg[rs2]);
                         instr = "amoswap.w";
                         break;
                     case 0b00000: // amoadd.w
-                        target_write_uint32(addr, data + reg[rs2]);
+                        target_write_uint32(addr, (int32_t)data + (int32_t)reg[rs2]);
                         instr = "amoadd.w";
                         break;
                     case 0b00100: // amoxor.w
-                        target_write_uint32(addr, data ^ reg[rs2]);
+                        target_write_uint32(addr, (int32_t)data ^ (int32_t)reg[rs2]);
                         instr = "amoxor.w";
                         break;
                     case 0b01100: // amoand.w
-                        target_write_uint32(addr, data & reg[rs2]);
+                        target_write_uint32(addr, (int32_t)data & (int32_t)reg[rs2]);
                         instr = "amoand.w";
                         break;
                     case 0b01000: // amoor.w
-                        target_write_uint32(addr, data | reg[rs2]);
+                        target_write_uint32(addr, (int32_t)data | (int32_t)reg[rs2]);
                         instr = "amoor.w";
                         break;
                     case 0b10000: // amomin.w
-                        target_write_uint32(addr, ((intx_t)data < (intx_t)reg[rs2]) ? data : reg[rs2]);
+                        target_write_uint32(addr, ((int32_t)data < (int32_t)reg[rs2]) ? (int32_t)data : (int32_t)reg[rs2]);
                         instr = "amomin.w";
                         break;
                     case 0b10100: // amomax.w
-                        target_write_uint32(addr, ((intx_t)data > (intx_t)reg[rs2]) ? data : reg[rs2]);
+                        target_write_uint32(addr, ((int32_t)data > (int32_t)reg[rs2]) ? (int32_t)data : (int32_t)reg[rs2]);
                         instr = "amomax.w";
                         break;
                     case 0b11000: // amominu.w
-                        target_write_uint32(addr, ((uintx_t)data < (uintx_t)reg[rs2]) ? data : reg[rs2]);
+                        target_write_uint32(addr, ((uint32_t)data < (uint32_t)reg[rs2]) ? (int32_t)data : (int32_t)reg[rs2]);
                         instr = "amominu.w";
                         break;
                     case 0b11100: // amomaxu.w
-                        target_write_uint32(addr, ((uintx_t)data > (uintx_t)reg[rs2]) ? data : reg[rs2]);
+                        target_write_uint32(addr, ((uint32_t)data > (uint32_t)reg[rs2]) ? (int32_t)data : (int32_t)reg[rs2]);
                         instr = "amomaxu.w";
                         break;
                     default:
                         goto illegal_instr;
                         break;
                     }
+                    if (rd!=0) {
+                        reg[rd] = (int32_t)data;
+                    }
+                    break;
+                case 0b011: // amo.d
+                    data = target_read_uint64(addr);
+                    switch (funct5) {
+                    case 0b00010: // lr.d
+                        if (rs2!=0) {
+                            goto illegal_instr;
+                        }
+                        load_res_addr = addr;
+                        instr = "lr.d";
+                        break;
+                    case 0b00011: // sc.d
+                        if (addr==load_res_addr) {
+                            target_write_uint64(addr, reg[rs2]);
+                            load_res_addr = (uintx_t)-1;
+                            data = 0;
+                        } else {
+                            data = 1;
+                        }
+                        instr = "sc.d";
+                        break;
+                    case 0b00001: // amoswap.d
+                        target_write_uint64(addr,                 (int64_t)reg[rs2]);
+                        instr = "amoswap.d";
+                        break;
+                    case 0b00000: // amoadd.d
+                        target_write_uint64(addr, (int64_t)data + (int64_t)reg[rs2]);
+                        instr = "amoadd.d";
+                        break;
+                    case 0b00100: // amoxor.d
+                        target_write_uint64(addr, (int64_t)data ^ (int64_t)reg[rs2]);
+                        instr = "amoxor.d";
+                        break;
+                    case 0b01100: // amoand.d
+                        target_write_uint64(addr, (int64_t)data & (int64_t)reg[rs2]);
+                        instr = "amoand.d";
+                        break;
+                    case 0b01000: // amoor.d
+                        target_write_uint64(addr, (int64_t)data | (int64_t)reg[rs2]);
+                        instr = "amoor.d";
+                        break;
+                    case 0b10000: // amomin.d
+                        target_write_uint64(addr, ((int64_t)data < (int64_t)reg[rs2]) ? (int64_t)data : (int64_t)reg[rs2]);
+                        instr = "amomin.d";
+                        break;
+                    case 0b10100: // amomax.d
+                        target_write_uint64(addr, ((int64_t)data > (int64_t)reg[rs2]) ? (int64_t)data : (int64_t)reg[rs2]);
+                        instr = "amomax.d";
+                        break;
+                    case 0b11000: // amominu.d
+                        target_write_uint64(addr, ((uint64_t)data < (uint64_t)reg[rs2]) ? (int64_t)data : (int64_t)reg[rs2]);
+                        instr = "amominu.d";
+                        break;
+                    case 0b11100: // amomaxu.d
+                        target_write_uint64(addr, ((uint64_t)data > (uint64_t)reg[rs2]) ? (int64_t)data : (int64_t)reg[rs2]);
+                        instr = "amomaxu.d";
+                        break;
+                    default:
+                        goto illegal_instr;
+                        break;
+                    }
+                    if (rd!=0) {
+                        reg[rd] = (int64_t)data;
+                    }
                     break;
                 default:
                     goto illegal_instr;
                     break;
-                }
-                if (rd!=0) {
-                    reg[rd] = (intx_t)data;
                 }
                 r.pc = pc+4;
             break;
@@ -933,6 +997,7 @@ int Machine::eval() {
         goto illegal_instr;
         break;
     }
+
     if (cycle>=TIMEOUT) halt = 1;
     return halt;
 
