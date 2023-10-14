@@ -22,6 +22,11 @@ Original Author: Shay Gal-on
 #ifndef CORE_PORTME_H
 #define CORE_PORTME_H
 
+#if !defined(XLEN)
+#define XLEN 32
+//#define XLEN 64
+#endif
+
 static volatile unsigned int *MTIME_ADDR  = (unsigned int*)0x20000000;
 
 /************************/
@@ -87,15 +92,27 @@ static volatile unsigned int *MTIME_ADDR  = (unsigned int*)0x20000000;
         ee_ptr_int needs to be the data type used to hold pointers, otherwise
    coremark may fail!!!
 */
-typedef signed short   ee_s16;
-typedef unsigned short ee_u16;
-typedef signed int     ee_s32;
-typedef double         ee_f32;
-typedef unsigned char  ee_u8;
-typedef unsigned int   ee_u32;
-typedef ee_u32         ee_ptr_int;
-typedef unsigned int   size_t;
-typedef size_t         ee_size_t;
+typedef unsigned char     ee_u8 ;
+typedef unsigned short    ee_u16;
+typedef unsigned int      ee_u32;
+typedef unsigned long int ee_u64;
+typedef   signed char     ee_s8 ;
+typedef   signed short    ee_s16;
+typedef   signed int      ee_s32;
+typedef   signed long int ee_s64;
+typedef double            ee_f32;
+
+#if   XLEN == 32
+typedef ee_u32            ee_ptr_int;
+typedef ee_u32            size_t;
+#elif XLEN == 64
+typedef ee_u64            ee_ptr_int;
+typedef ee_u64            size_t;
+#else
+#error Unsupported XLEN
+#endif
+
+typedef size_t            ee_size_t;
 #define NULL ((void *)0)
 /* align_mem :
         This macro is used to align an offset to point to a 32b value. It is

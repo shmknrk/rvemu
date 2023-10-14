@@ -1,10 +1,11 @@
 #===============================================================================
 # Config
 #-------------------------------------------------------------------------------
-XLEN                := 32
-USE_MULDIV          := 1
-USE_ATOMIC          := 1
-USE_COMPRESSED      := 1
+#XLEN                := 32
+XLEN                := 64
+#USE_MULDIV          := 1
+#USE_ATOMIC          := 1
+#USE_COMPRESSED      := 1
 
 #TRACE_RF            := 1
 #TRACE_RF_FILE       := trace_rf.txt
@@ -117,18 +118,33 @@ rv32um_tests        := \
 	div divu \
 	rem remu
 
-rv32ua_tests = \
+rv32ua_tests        := \
 	amoadd_w amoand_w amomax_w amomaxu_w amomin_w amominu_w amoor_w amoxor_w amoswap_w \
 	lrsc
 
 rv32uc_tests        := \
 	rvc
 
+rv64ui_tests        := \
+	simple \
+	add addi addiw addw sub subw and andi or ori xor xori \
+	sll slli slliw sllw srl srli srliw srlw sra srai sraiw sraw slt slti sltiu sltu \
+	beq bge bgeu blt bltu bne jal jalr \
+	lb lbu lh lhu lw lwu ld sb sh sw sd \
+	lui auipc \
+	fence_i ma_data
+
 .PHONY: isa
+ifeq      ($(XLEN),32)
 isa: rv32ui_test
 isa: rv32um_test
 isa: rv32ua_test
 isa: rv32uc_test
+else ifeq ($(XLEN),64)
+isa: rv64ui_test
+else
+$(error Error: Unsupported XLEN.)
+endif
 
 # $(eval $(call riscv-tests-template,TVM))
 define riscv-tests-template
@@ -145,16 +161,22 @@ $$($1_p_tests): $$(TARGET) $$(ISA_DIR)/$1
 	@echo
 
 $$(ISA_DIR)/$1:
-	make $1 -C $$(ISA_DIR)
+	make XLEN=$(XLEN) $1 -C $$(ISA_DIR)
 
 $$($1_tests): %: $1-p-%
 
 endef
 
+ifeq      ($(XLEN),32)
 $(eval $(call riscv-tests-template,rv32ui))
 $(eval $(call riscv-tests-template,rv32um))
 $(eval $(call riscv-tests-template,rv32ua))
 $(eval $(call riscv-tests-template,rv32uc))
+else ifeq ($(XLEN),64)
+$(eval $(call riscv-tests-template,rv64ui))
+else
+$(error Error: Unsupported XLEN.)
+endif
 
 #===============================================================================
 # CoreMark
@@ -167,7 +189,7 @@ coremark: $(TARGET) $(COREMARK_DIR)/$(ARCH)
 	@echo
 
 $(COREMARK_DIR)/$(ARCH):
-	make RISCV_ARCH=$(ARCH) -C $(COREMARK_DIR)
+	make XLEN=$(XLEN) RISCV_ARCH=$(ARCH) -C $(COREMARK_DIR)
 
 #===============================================================================
 # Embench
@@ -186,4 +208,4 @@ $(embench): $(TARGET) $(EMBENCH_DIR)/$(ARCH)
 	@echo
 
 $(EMBENCH_DIR)/$(ARCH):
-	make RISCV_ARCH=$(ARCH) -C $(EMBENCH_DIR)
+	make XLEN=$(XLEN) RISCV_ARCH=$(ARCH) -C $(EMBENCH_DIR)

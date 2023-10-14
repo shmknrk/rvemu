@@ -5,7 +5,7 @@
 #define READ_UINT(size) \
 uint ## size ## _t RAM::read_uint ## size(uintx_t addr) { \
     if (addr>(MEMSIZE-size/8)) { \
-        fprintf(stderr, "Error: ram read address (0x%08x) is out of range. (read_uint" #size ")\n", addr); \
+        fprintf(stderr, "Error: ram read address (0x%08lx) is out of range. (read_uint" #size ")\n", (uint64_t)addr); \
         exit(0); \
     } \
     uint ## size ## _t *data = (uint ## size ## _t *)&ram[addr]; \
@@ -19,7 +19,7 @@ READ_UINT(64)
 #define WRITE_UINT(size) \
 void RAM::write_uint ## size(uintx_t addr, uint ## size ## _t data) { \
     if (addr>(MEMSIZE-size/8)) { \
-        fprintf(stderr, "Error: ram write address (0x%08x) is out of range. (write_uint" #size ")\n", addr); \
+        fprintf(stderr, "Error: ram write address (0x%08lx) is out of range. (write_uint" #size ")\n", (uint64_t)addr); \
         exit(0); \
     } \
     uint ## size ##_t *p = (uint ## size ## _t *)&ram[addr]; \

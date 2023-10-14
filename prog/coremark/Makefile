@@ -66,6 +66,7 @@ RISCV_CFLAGS        += -O2
 RISCV_CFLAGS        += -march=$(RISCV_ARCH)
 RISCV_CFLAGS        += -mabi=$(RISCV_ABI)
 RISCV_CFLAGS        += -nostartfiles
+RISCV_CFLAGS        += -DXLEN=$(XLEN)
 RISCV_CFLAGS        += -DITERATIONS=$(ITERATIONS)
 RISCV_CFLAGS        += $(addprefix -I,$(INC_DIR))
 

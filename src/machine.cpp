@@ -80,13 +80,13 @@ int Machine::eval() {
     instr         = "";
     cinstr        = "";
 
-    uint8_t opcode_1_0 = ( ir        & 0x3 ); // ir[ 1: 0]
-    uint8_t opcode_6_2 = ((ir >> 2 ) & 0x1f); // ir[ 6: 2]
-    uint8_t rd         = ((ir >> 7 ) & 0x1f); // ir[11: 7]
-    uint8_t funct3     = ((ir >> 12) & 0x7 ); // ir[14:12]
-    uint8_t rs1        = ((ir >> 15) & 0x1f); // ir[19:15]
-    uint8_t rs2        = ((ir >> 20) & 0x1f); // ir[24:20]
-    uint8_t funct7     = ((ir >> 25) & 0x7f); // ir[31:25]
+    uint8_t opcode_1_0 =  ir        & 0x3 ; // ir[ 1: 0]
+    uint8_t opcode_6_2 = (ir >> 2 ) & 0x1f; // ir[ 6: 2]
+    uint8_t rd         = (ir >> 7 ) & 0x1f; // ir[11: 7]
+    uint8_t funct3     = (ir >> 12) & 0x7 ; // ir[14:12]
+    uint8_t rs1        = (ir >> 15) & 0x1f; // ir[19:15]
+    uint8_t rs2        = (ir >> 20) & 0x1f; // ir[24:20]
+    uint8_t funct7     = (ir >> 25) & 0x7f; // ir[31:25]
 
     uint8_t funct2;
     uint8_t funct5;
@@ -136,7 +136,7 @@ int Machine::eval() {
         r.pc = pc+2;
         break; // Quadrant 0
     case 0b01: // Quadrant 1
-        funct3 = ((ir >> 13) & 0x7); // ir[15:13]
+        funct3 = (ir >> 13) & 0x7; // ir[15:13]
         switch (funct3) {
         case 0b000: // c.nop/c.addi
             if (rd==0) {
@@ -145,7 +145,8 @@ int Machine::eval() {
                 cinstr  = "c.nop";
             } else {
                 imm     = ((ir >> 7) & 0x20) | ((ir >> 2) & 0x1f);
-                imm     = (((int32_t)imm << 26) >> 26); // sext
+                imm     = ((int32_t)imm << 26) >> 26; // sext
+                imm     = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
                 reg[rd] = reg[rd] + imm;
                 ir      = (imm << 20) | (rd << 15) | (rd << 7) | 0b0010011;
                 instr   = "addi";
@@ -155,7 +156,8 @@ int Machine::eval() {
             break;
         case 0b001: // c.jal
             imm    = ((ir >> 1) & 0xb40) | ((ir << 2) & 0x400) | ((ir << 1) & 0x80) | ((ir << 3) & 0x20) | ((ir >> 7) & 0x10) | ((ir >> 2) & 0xe);
-            imm    = (((int32_t)imm << 20) >> 20); // sext
+            imm    = ((int32_t)imm << 20) >> 20; // sext
+            imm    = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
             reg[1] = pc+2;
             r.pc   = pc + imm;
             ir     = (imm & 0x800ff000) | ((imm & 0x7fe) << 20) | ((imm & 0x800) << 9) | (0x1 << 7) | 0b1101111;
@@ -164,7 +166,8 @@ int Machine::eval() {
             break;
         case 0b010: // c.li
             imm    = ((ir >> 7) & 0x20) | ((ir >> 2) & 0x1f);
-            imm    = (((int32_t)imm << 26) >> 26);
+            imm    = ((int32_t)imm << 26) >> 26; // sext
+            imm    = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
             if (rd!=0) {
                 reg[rd] = imm;
             }
@@ -176,7 +179,8 @@ int Machine::eval() {
         case 0b011: // c.addi16sp/c.lui
             if (rd==2) { // c.addi16sp
                 imm    = ((ir >> 3) & 0x200) | ((ir << 4) & 0x180) | ((ir << 1) & 0x40) | ((ir << 3) & 0x20) | ((ir >> 2) & 0x10);
-                imm    = (((int32_t)imm << 22) >> 22);
+                imm    = ((int32_t)imm << 22) >> 22; // sext
+                imm    = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
                 if (imm==0) {
                     goto illegal_instr;
                 }
@@ -185,8 +189,9 @@ int Machine::eval() {
                 instr  = "addi";
                 cinstr = "c.addi16sp";
             } else { // c.lui
-                imm     = ((ir << 5) & 0x20000) | ((ir << 10) & 0x1f000);
-                imm     = (((int32_t)imm << 14) >> 14);
+                imm    = ((ir << 5) & 0x20000) | ((ir << 10) & 0x1f000);
+                imm    = ((int32_t)imm << 14) >> 14; // sext
+                imm    = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
                 if (imm==0) {
                     goto illegal_instr;
                 }
@@ -221,7 +226,8 @@ int Machine::eval() {
                 break;
             case 0b10: // c.andi
                 imm     = ((ir >> 7) & 0x20) | ((ir >> 2) & 0x1f);
-                imm     = (((int32_t)imm << 26) >> 26);
+                imm     = ((int32_t)imm << 26) >> 26; // sext
+                imm     = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
                 reg[rd] = reg[rd] & imm;
                 ir      = (imm << 20) | (rs1 << 15) | (0b111 << 12) | (rd << 7) | 0b0010011;
                 instr   = "andi";
@@ -267,7 +273,8 @@ int Machine::eval() {
             break;
         case 0b101: // c.j
             imm    = ((ir >> 1) & 0xb40) | ((ir << 2) & 0x400) | ((ir << 1) & 0x80) | ((ir << 3) & 0x20) | ((ir >> 7) & 0x10) | ((ir >> 2) & 0xe);
-            imm    = (((int32_t)imm << 20) >> 20); // sext
+            imm    = ((int32_t)imm << 20) >> 20; // sext
+            imm    = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
             r.pc   = pc + imm;
             ir     = (imm & 0x800ff000) | ((imm & 0x7fe) << 20) | ((imm & 0x800) << 9) | 0b1101111;
             instr  = "jal";
@@ -276,7 +283,8 @@ int Machine::eval() {
         case 0b110: // c.beqz
             rs1    = 0x8 | ((ir >> 7) & 0x7); // ir[9:7] + 8
             imm    = ((ir >> 4) & 0x100) | ((ir << 1) & 0xc0) | ((ir << 3) & 0x20) | ((ir >> 7) & 0x18) | ((ir >> 2) & 0x6);
-            imm    = (((int32_t)imm << 23) >> 23);
+            imm    = ((int32_t)imm << 23) >> 23; // sext
+            imm    = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
             if (reg[rs1]==0) {
                 r.pc = pc + imm;
             } else {
@@ -289,7 +297,8 @@ int Machine::eval() {
         case 0b111: // c.bnez
             rs1    = 0x8 | ((ir >> 7) & 0x7); // ir[9:7] + 8
             imm    = ((ir >> 4) & 0x100) | ((ir << 1) & 0xc0) | ((ir << 3) & 0x20) | ((ir >> 7) & 0x18) | ((ir >> 2) & 0x6);
-            imm    = (((int32_t)imm << 23) >> 23);
+            imm    = ((int32_t)imm << 23) >> 23; // sext
+            imm    = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
             if (reg[rs1]!=0) {
                 r.pc = pc + imm;
             } else {
@@ -305,9 +314,9 @@ int Machine::eval() {
         }
         break; // Quadrant 1
     case 0b10: // Quadrant 2
-        funct3 = ((ir >> 13) & 0x7 ); // ir[15:13]
-        rs1    = ((ir >>  7) & 0x1f);
-        rs2    = ((ir >>  2) & 0x1f);
+        funct3 = (ir >> 13) & 0x7 ; // ir[15:13]
+        rs1    = (ir >>  7) & 0x1f;
+        rs2    = (ir >>  2) & 0x1f;
         switch (funct3) {
         case 0b000: // c.slli
             uimm   = ((ir >> 7) & 0x20) | ((ir >> 2) & 0x1f);
@@ -383,7 +392,8 @@ int Machine::eval() {
     case 0b11:
         switch (opcode_6_2) {
         case 0b00000: // load
-            imm  = (int32_t)ir >> 20;
+            imm  = (int32_t)ir >> 20; // sext
+            imm  = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
             addr = reg[rs1]+imm;
             switch (funct3) {
             case 0b000: // lb
@@ -398,6 +408,10 @@ int Machine::eval() {
                 data  = (int32_t)target_read_uint32(addr);
                 instr = "lw";
                 break;
+            case 0b011: // ld
+                data  = (int64_t)target_read_uint64(addr);
+                instr = "ld";
+                break;
             case 0b100: // lbu
                 data  = (uint8_t)target_read_uint8(addr);
                 instr = "lbu";
@@ -405,6 +419,10 @@ int Machine::eval() {
             case 0b101: // lhu
                 data  = (uint16_t)target_read_uint16(addr);
                 instr = "lhu";
+                break;
+            case 0b110: // lwu
+                data  = (uint32_t)target_read_uint32(addr);
+                instr = "lwu";
                 break;
             default:
                 goto illegal_instr;
@@ -417,6 +435,7 @@ int Machine::eval() {
             break; // load
         case 0b01000: // store
             imm  = (((int32_t)ir >> 20) & 0xffffffe0) | ((ir >> 7) & 0x1f);
+            imm  = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
             addr = reg[rs1]+imm;
             switch (funct3) {
             case 0b000: // sb
@@ -431,6 +450,10 @@ int Machine::eval() {
                 target_write_uint32(addr, reg[rs2]);
                 instr = "sw";
                 break;
+            case 0b011: // sd
+                target_write_uint64(addr, reg[rs2]);
+                instr = "sd";
+                break;
             default:
                 goto illegal_instr;
                 break;
@@ -439,6 +462,7 @@ int Machine::eval() {
             break; // store
         case 0b00100: // op-imm
             imm = (int32_t)ir >> 20;
+            imm = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
             switch (funct3) {
             case 0b000: // addi
                 data  = reg[rs1] + imm;
@@ -492,6 +516,45 @@ int Machine::eval() {
             }
             r.pc = pc+4;
             break; // op-imm
+        case 0b00110: // op-imm-32
+            imm = (int32_t)ir >> 20;
+            switch (funct3) {
+            case 0b000: // addiw
+                imm   = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
+                data  = (uint32_t)(reg[rs1] + imm);
+                data  = ((intx_t)data << (XLEN-32)) >> (XLEN-32); // sext
+                instr = "addiw";
+                break;
+            case 0b001: // slliw
+                if ((imm & ~0x1f)!=0) {
+                    goto illegal_instr;
+                }
+                data  = (uint32_t)(reg[rs1] << (imm & 0x1f));
+                data  = ((intx_t)data << (XLEN-32)) >> (XLEN-32); // sext
+                instr = "slliw";
+                break;
+            case 0b101: // srliw/sraiw
+                if ((imm & ~0x41f)!=0) {
+                    goto illegal_instr;
+                }
+                if (imm & 0x400) { // sraiw
+                    data  = (int32_t)reg[rs1] >> (imm & 0x1f);
+                    instr = "sraiw";
+                } else { // srliw
+                    data  = (uint32_t)reg[rs1] >> (imm & 0x1f);
+                    instr = "srliw";
+                }
+                data = ((intx_t)data << (XLEN-32)) >> (XLEN-32); // sext
+                break;
+            default:
+                goto illegal_instr;
+                break;
+            }
+            if (rd!=0) {
+                reg[rd] = data;
+            }
+            r.pc = pc+4;
+            break;
         case 0b01100: // op
             if ((funct7 & ~0x21)!=0) {
                 goto illegal_instr;
@@ -608,8 +671,47 @@ int Machine::eval() {
             }
             r.pc = pc+4;
             break; // op
+        case 0b01110: // op-32
+            if ((funct7 & ~0x21)!=0) {
+                goto illegal_instr;
+            }
+            switch (funct3) {
+            case 0b000: // addw/subw
+                if (funct7 & 0x20) { // subw
+                    data  = (int32_t)(reg[rs1] - reg[rs2]);
+                    instr = "sub";
+                } else { // addw
+                    data  = (int32_t)(reg[rs1] + reg[rs2]);
+                    instr = "add";
+                }
+                break;
+            case 0b001: // sllw
+                data  = (uint32_t)(reg[rs1] << (reg[rs2] & 0x1f));
+                data  = ((intx_t)data << (XLEN-32)) >> (XLEN-32); // sext
+                instr = "sllw";
+                break;
+            case 0b101: // srlw/sraw
+                if (funct7 & 0x20) { // sraw
+                    data  = (int32_t)reg[rs1] >> (reg[rs2] & 0x1f);
+                    instr = "sraw";
+                } else { // srlw
+                    data  = (uint32_t)reg[rs1] >> (reg[rs2] & 0x1f);
+                    instr = "srlw";
+                }
+                data = ((intx_t)data << (XLEN-32)) >> (XLEN-32); // sext
+                break;
+            default:
+                goto illegal_instr;
+                break;
+            }
+            if (rd!=0) {
+                reg[rd] = data;
+            }
+            r.pc = pc+4;
+            break; // op-32
         case 0b00101: // auipc
             imm  = (ir & 0xfffff000);
+            imm  = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
             data = pc + imm;
             if (rd!=0) {
                 reg[rd] = data;
@@ -619,6 +721,7 @@ int Machine::eval() {
             break; // auipc
         case 0b01101: // lui
             imm  = (ir & 0xfffff000);
+            imm  = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
             data = imm;
             if (rd!=0) {
                 reg[rd] = data;
@@ -658,6 +761,7 @@ int Machine::eval() {
             }
             if (cond) {
                 imm  = (((int32_t)ir >> 19) & 0xfffff000) | ((ir << 4) & 0x800) | ((ir >> 20) & 0x7e0) | ((ir >> 7) & 0x1e);
+                imm  = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
                 r.pc = pc + imm;
             } else {
                 r.pc = pc+4;
@@ -665,6 +769,7 @@ int Machine::eval() {
             break; // branch
         case 0b11001: // jalr
             imm   = (int32_t)ir >> 20;
+            imm   = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
             r.pc  = reg[rs1] + imm;
             if (rd!=0) {
                 reg[rd] = pc+4;
@@ -676,6 +781,7 @@ int Machine::eval() {
                 reg[rd] = pc+4;
             }
             imm   = (((int32_t)ir >> 11) & 0xfff00000) | (ir & 0x000ff000) | ((ir >> 9) & 0x800) | ((ir >> 20) & 0x7fe);
+            imm   = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
             r.pc  = pc + imm;
             instr = "jal";
             break; // jal
@@ -779,13 +885,21 @@ int Machine::eval() {
 
 illegal_instr:
     fprintf(stderr, "Error: illegal instruction detected!!\n");
+#if      XLEN == 32
     fprintf(stderr, "pc=[0x%08x] ir=[0x%08x]\n", pc, ir);
+#else // XLEN == 64
+    fprintf(stderr, "pc=[0x%016lx] ir=[0x%08x]\n", pc, ir);
+#endif
     exit(0);
 }
 
 #if defined(TRACE_RF)
 void Machine::dump_regs() {
+#if      XLEN == 32
     fprintf(fp, "%08d %08x %08x", cycle, pc, ir);
+#else // XLEN == 64
+    fprintf(fp, "%08d %016lx %08x", cycle, pc, ir);
+#endif
 #if defined(DEBUG)
     fprintf(fp, " %17s", instr);
     if (is_compressed) {
@@ -795,7 +909,11 @@ void Machine::dump_regs() {
     fprintf(fp, "\n");
     for (int i=0; i<4; i++) {
         for (int j=0; j<8; j++) {
+#if      XLEN == 32
             fprintf(fp, "%08x", reg[i*8+j]);
+#else // XLEN == 64
+            fprintf(fp, "%016lx", reg[i*8+j]);
+#endif
             fprintf(fp, ((j!=7) ? " " : "\n"));
         }
     }
