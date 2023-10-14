@@ -702,14 +702,14 @@ int Machine::eval() {
                         if (rs2!=0) {
                             goto illegal_instr;
                         }
-                        load_res = addr  ;
-                        instr    = "lr.w";
+                        load_res_addr = addr;
+                        instr = "lr.w";
                         break;
                     case 0b00011: // sc.w
-                        if (addr==load_res) {
+                        if (addr==load_res_addr) {
                             target_write_uint32(addr, reg[rs2]);
-                            load_res = 0;
-                            data     = 0;
+                            load_res_addr = (uintx_t)-1;
+                            data = 0;
                         } else {
                             data = 1;
                         }
