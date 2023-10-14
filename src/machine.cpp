@@ -580,7 +580,7 @@ int Machine::eval() {
                 case 0b100: // div
                     if (reg[rs2]==0) {
                         data = -1;
-                    } else if ((reg[rs1]==(uintx_t)1 << (XLEN-1)) && ((intx_t)reg[rs2]==-1)) {
+                    } else if ((reg[rs1]==((uintx_t)1 << (XLEN-1))) && ((intx_t)reg[rs2]==-1)) {
                         data = reg[rs1];
                     } else {
                         data = (intx_t)reg[rs1] / (intx_t)reg[rs2];
@@ -598,7 +598,7 @@ int Machine::eval() {
                 case 0b110: // rem
                     if (reg[rs2]==0) {
                         data = reg[rs1];
-                    } else if ((reg[rs1]==(uintx_t)1 << (XLEN-1)) && ((intx_t)reg[rs2]==-1)) {
+                    } else if ((reg[rs1]==((uintx_t)1 << (XLEN-1))) && ((intx_t)reg[rs2]==-1)) {
                         data = 0;
                     } else {
                         data = (intx_t)reg[rs1] % (intx_t)reg[rs2];
@@ -675,34 +675,87 @@ int Machine::eval() {
             if ((funct7 & ~0x21)!=0) {
                 goto illegal_instr;
             }
-            switch (funct3) {
-            case 0b000: // addw/subw
-                if (funct7 & 0x20) { // subw
-                    data  = (int32_t)(reg[rs1] - reg[rs2]);
-                    instr = "sub";
-                } else { // addw
-                    data  = (int32_t)(reg[rs1] + reg[rs2]);
-                    instr = "add";
+            if (funct7 & 0x01) {
+                switch (funct3) {
+                case 0b000: // mulw
+                    data  = (uint32_t)((intx_t)reg[rs1] * (intx_t)reg[rs2]);
+                    data  = ((intx_t)data << (XLEN-32)) >> (XLEN-32); // sext
+                    instr = "mulw";
+                    break;
+                case 0b100: // divw
+                    if ((int32_t)reg[rs2]==0) {
+                        data = -1;
+                    } else if (((int32_t)reg[rs1]==((int32_t)1 << 31)) && ((int32_t)reg[rs2]==-1)) {
+                        data = (int32_t)reg[rs1];
+                    } else {
+                        data = (int32_t)reg[rs1] / (int32_t)reg[rs2];
+                        data = ((intx_t)data << (XLEN-32)) >> (XLEN-32);
+                    }
+                    instr = "divw";
+                    break;
+                case 0b101: // divuw
+                    if ((uint32_t)reg[rs2]==0) {
+                        data = -1;
+                    } else {
+                        data = (uint32_t)reg[rs1] / (uint32_t)reg[rs2];
+                        data = ((intx_t)data << (XLEN-32)) >> (XLEN-32);
+                    }
+                    instr = "divuw";
+                    break;
+                case 0b110: // remw
+                    if ((int32_t)reg[rs2]==0) {
+                        data = reg[rs1];
+                    } else if (((int32_t)reg[rs1]==((int32_t)1 << 31)) && ((int32_t)reg[rs2]==-1)) {
+                        data = 0;
+                    } else {
+                        data = (int32_t)reg[rs1] % (int32_t)reg[rs2];
+                        data = ((intx_t)data << (XLEN-32)) >> (XLEN-32);
+                    }
+                    instr = "remw";
+                    break;
+                case 0b111: // remuw
+                    if ((uint32_t)reg[rs2]==0) {
+                        data = reg[rs1];
+                    } else {
+                        data = (uint32_t)reg[rs1] % (uint32_t)reg[rs2];
+                        data = ((intx_t)data << (XLEN-32)) >> (XLEN-32);
+                    }
+                    instr = "remuw";
+                    break;
+                default:
+                    goto illegal_instr;
+                    break;
                 }
-                break;
-            case 0b001: // sllw
-                data  = (uint32_t)(reg[rs1] << (reg[rs2] & 0x1f));
-                data  = ((intx_t)data << (XLEN-32)) >> (XLEN-32); // sext
-                instr = "sllw";
-                break;
-            case 0b101: // srlw/sraw
-                if (funct7 & 0x20) { // sraw
-                    data  = (int32_t)reg[rs1] >> (reg[rs2] & 0x1f);
-                    instr = "sraw";
-                } else { // srlw
-                    data  = (uint32_t)reg[rs1] >> (reg[rs2] & 0x1f);
-                    instr = "srlw";
+            } else {
+                switch (funct3) {
+                case 0b000: // addw/subw
+                    if (funct7 & 0x20) { // subw
+                        data  = (int32_t)(reg[rs1] - reg[rs2]);
+                        instr = "sub";
+                    } else { // addw
+                        data  = (int32_t)(reg[rs1] + reg[rs2]);
+                        instr = "add";
+                    }
+                    break;
+                case 0b001: // sllw
+                    data  = (uint32_t)(reg[rs1] << (reg[rs2] & 0x1f));
+                    data  = ((intx_t)data << (XLEN-32)) >> (XLEN-32); // sext
+                    instr = "sllw";
+                    break;
+                case 0b101: // srlw/sraw
+                    if (funct7 & 0x20) { // sraw
+                        data  = (int32_t)reg[rs1] >> (reg[rs2] & 0x1f);
+                        instr = "sraw";
+                    } else { // srlw
+                        data  = (uint32_t)reg[rs1] >> (reg[rs2] & 0x1f);
+                        instr = "srlw";
+                    }
+                    data = ((intx_t)data << (XLEN-32)) >> (XLEN-32); // sext
+                    break;
+                default:
+                    goto illegal_instr;
+                    break;
                 }
-                data = ((intx_t)data << (XLEN-32)) >> (XLEN-32); // sext
-                break;
-            default:
-                goto illegal_instr;
-                break;
             }
             if (rd!=0) {
                 reg[rd] = data;

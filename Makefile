@@ -3,7 +3,7 @@
 #-------------------------------------------------------------------------------
 #XLEN                := 32
 XLEN                := 64
-#USE_MULDIV          := 1
+USE_MULDIV          := 1
 #USE_ATOMIC          := 1
 #USE_COMPRESSED      := 1
 
@@ -134,6 +134,11 @@ rv64ui_tests        := \
 	lui auipc \
 	fence_i ma_data
 
+rv64um_tests        := \
+	mul mulh mulhsu mulhu mulw \
+	div divu divuw divw \
+	rem remu remuw remw
+
 .PHONY: isa
 ifeq      ($(XLEN),32)
 isa: rv32ui_test
@@ -142,6 +147,7 @@ isa: rv32ua_test
 isa: rv32uc_test
 else ifeq ($(XLEN),64)
 isa: rv64ui_test
+isa: rv64um_test
 else
 $(error Error: Unsupported XLEN.)
 endif
@@ -174,6 +180,7 @@ $(eval $(call riscv-tests-template,rv32ua))
 $(eval $(call riscv-tests-template,rv32uc))
 else ifeq ($(XLEN),64)
 $(eval $(call riscv-tests-template,rv64ui))
+$(eval $(call riscv-tests-template,rv64um))
 else
 $(error Error: Unsupported XLEN.)
 endif

@@ -1,7 +1,7 @@
 # RVEmu
 
 - RISC-V Emulator written in C++
-- RV32IMAC, RV64I
+- RV32IMAC, RV64IM
 
 ## Installation
 
