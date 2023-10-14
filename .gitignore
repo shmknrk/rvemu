@@ -1,6 +1,8 @@
 .vscode/
 
 rvemu
+rvemu32
+rvemu64
 
 *.d
 *.o

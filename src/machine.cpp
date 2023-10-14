@@ -121,6 +121,16 @@ int Machine::eval() {
             instr   = "lw";
             cinstr  = "c.lw";
             break;
+#if XLEN == 64
+        case 0b011: // c.ld
+            uimm    = ((ir << 1) & 0xc0) | ((ir >> 7) & 0x38);
+            addr    = reg[rs1] + uimm;
+            reg[rd] = (int64_t)target_read_uint64(addr);
+            ir      = (uimm << 20) | (rs1 << 15) | (0b011 << 12) | (rd << 7) | 0b0000011;
+            instr   = "ld";
+            cinstr  = "c.ld";
+            break;
+#endif
         case 0b110: // c.sw
             uimm   = ((ir << 1) & 0x40) | ((ir >> 7) & 0x38) | ((ir >> 4) & 0x4);
             addr   = reg[rs1] + uimm;
@@ -129,6 +139,16 @@ int Machine::eval() {
             instr  = "sw";
             cinstr = "c.sw";
             break;
+#if XLEN == 64
+        case 0b111: // c.sd
+            uimm   = ((ir << 1) & 0xc0) | ((ir >> 7) & 0x38);
+            addr   = reg[rs1] + uimm;
+            target_write_uint64(addr, reg[rs2]);
+            ir     = ((uimm & 0xfe0) << 20) | (rs2 << 20) | (rs1 << 15) | (0b011 << 12) | ((uimm & 0x1f) << 7) | 0b0100011;
+            instr  = "sd";
+            cinstr = "c.sd";
+            break;
+#endif
         default:
             goto illegal_instr;
             break;
@@ -154,6 +174,7 @@ int Machine::eval() {
             }
             r.pc = pc+2;
             break;
+#if XLEN == 32
         case 0b001: // c.jal
             imm    = ((ir >> 1) & 0xb40) | ((ir << 2) & 0x400) | ((ir << 1) & 0x80) | ((ir << 3) & 0x20) | ((ir >> 7) & 0x10) | ((ir >> 2) & 0xe);
             imm    = ((int32_t)imm << 20) >> 20; // sext
@@ -164,6 +185,22 @@ int Machine::eval() {
             instr  = "jal";
             cinstr = "c.jal";
             break;
+#else
+        case 0b001: // c.addiw
+            imm    = ((ir >> 7) & 0x20) | ((ir >> 2) & 0x1f);
+            imm    = ((int32_t)imm << 26) >> 26; // sext
+            imm    = ((intx_t)imm << (XLEN-32)) >> (XLEN-32); // sext
+            if (rd!=0) {
+                data    = (uint32_t)(reg[rd] + imm);
+                data    = ((intx_t)data << (XLEN-32)) >> (XLEN-32); // sext
+                reg[rd] = data;
+            }
+            r.pc   = pc+2;
+            ir     = (imm << 20) | (rd << 15) | (rd << 7) | 0b0011011;
+            instr  = "addiw";
+            cinstr = "c.addiw";
+            break;
+#endif
         case 0b010: // c.li
             imm    = ((ir >> 7) & 0x20) | ((ir >> 2) & 0x1f);
             imm    = ((int32_t)imm << 26) >> 26; // sext
@@ -233,36 +270,62 @@ int Machine::eval() {
                 instr   = "andi";
                 cinstr  = "c.andi";
                 break;
-            case 0b11: // c.sub/c.or/c.and
+            case 0b11: // c.sub/c.xor/c.or/c.and/c.subw/s.addw
                 funct2 = ((ir >> 5) & 0x3); // ir[6:5]
-                switch (funct2) {
-                case 0b00: // c.sub
-                    reg[rd] = reg[rd] - reg[rs2];
-                    ir      = (0b0100000 << 25) | (rs2 << 20) | (rs1 << 15) | (0b000 << 12) | (rd << 7) | 0b0110011;
-                    instr   = "sub";
-                    cinstr  = "c.sub";
-                    break;
-                case 0b01: // c.xor
-                    reg[rd] = reg[rd] ^ reg[rs2];
-                    ir      = (rs2 << 20) | (rs1 << 15) | (0b100 << 12) | (rd << 7) | 0b0110011;
-                    instr   = "xor";
-                    cinstr  = "c.xor";
-                    break;
-                case 0b10: // c.or
-                    reg[rd] = reg[rd] | reg[rs2];
-                    ir      = (rs2 << 20) | (rs1 << 15) | (0b110 << 12) | (rd << 7) | 0b0110011;
-                    instr   = "or";
-                    cinstr  = "c.or";
-                    break;
-                case 0b11: // c.and
-                    reg[rd] = reg[rd] & reg[rs2];
-                    ir      = (rs2 << 20) | (rs1 << 15) | (0b111 << 12) | (rd << 7) | 0b0110011;
-                    instr   = "and";
-                    cinstr  = "c.and";
-                    break;
-                default:
-                    goto illegal_instr;
-                    break;
+                if (ir & 0x1000) {
+                    switch (funct2) {
+#if XLEN == 64
+                    case 0b00: // c.subw
+                        data    = (uint32_t)(reg[rd] - reg[rs2]);
+                        data    = ((intx_t)data << (XLEN-32)) >> (XLEN-32);
+                        reg[rd] = data;
+                        ir      = (0b0100000 << 25) | (rs2 << 20) | (rs1 << 15) | (rd << 7) | 0b0111011;
+                        instr   = "subw";
+                        cinstr  = "c.subw";
+                        break;
+                    case 0b01: // c.addw
+                        data    = (uint32_t)(reg[rd] + reg[rs2]);
+                        data    = ((intx_t)data << (XLEN-32)) >> (XLEN-32);
+                        reg[rd] = data;
+                        ir      = (rs2 << 20) | (rs1 << 15) | (rd << 7) | 0b0111011;
+                        instr   = "addw";
+                        cinstr  = "c.addw";
+                        break;
+#endif
+                    default:
+                        goto illegal_instr;
+                        break;
+                    }
+                } else {
+                    switch (funct2) {
+                    case 0b00: // c.sub
+                        reg[rd] = reg[rd] - reg[rs2];
+                        ir      = (0b0100000 << 25) | (rs2 << 20) | (rs1 << 15) | (rd << 7) | 0b0110011;
+                        instr   = "sub";
+                        cinstr  = "c.sub";
+                        break;
+                    case 0b01: // c.xor
+                        reg[rd] = reg[rd] ^ reg[rs2];
+                        ir      = (rs2 << 20) | (rs1 << 15) | (0b100 << 12) | (rd << 7) | 0b0110011;
+                        instr   = "xor";
+                        cinstr  = "c.xor";
+                        break;
+                    case 0b10: // c.or
+                        reg[rd] = reg[rd] | reg[rs2];
+                        ir      = (rs2 << 20) | (rs1 << 15) | (0b110 << 12) | (rd << 7) | 0b0110011;
+                        instr   = "or";
+                        cinstr  = "c.or";
+                        break;
+                    case 0b11: // c.and
+                        reg[rd] = reg[rd] & reg[rs2];
+                        ir      = (rs2 << 20) | (rs1 << 15) | (0b111 << 12) | (rd << 7) | 0b0110011;
+                        instr   = "and";
+                        cinstr  = "c.and";
+                        break;
+                    default:
+                        goto illegal_instr;
+                        break;
+                    }
                 }
                 break;
             default:
@@ -332,13 +395,26 @@ int Machine::eval() {
             uimm   = ((ir << 4) & 0xc0) | ((ir >> 7) & 0x20) | ((ir >> 2) & 0x1c);
             addr   = reg[2] + uimm;
             if (rd!=0) {
-                reg[rd] = target_read_uint32(addr);
+                reg[rd] = (int32_t)target_read_uint32(addr);
             }
             r.pc   = pc+2;
             ir     = (uimm << 20) | (0x2 << 15) | (0b010 << 12) | (rd << 7) | 0b0000011;
             instr  = "lw";
             cinstr = "c.lwsp";
             break;
+#if XLEN == 64
+        case 0b011: // c.ldsp
+            uimm   = ((ir << 4) & 0x1c0) | ((ir >> 7) & 0x20) | ((ir >> 2) & 0x18);
+            addr   = reg[2] + uimm;
+            if (rd!=0) {
+                reg[rd] = (int64_t)target_read_uint64(addr);
+            }
+            r.pc   = pc+2;
+            ir     = (uimm << 20) | (0x2 << 15) | (0b011 << 12) | (rd << 7) | 0b0000011;
+            instr  = "ld";
+            cinstr = "c.ldsp";
+            break;
+#endif
         case 0b100: // c.jr/c.mv/c.jalr/c.add
             if (((ir >> 12) & 0x1)==0) { // c.jr/c.mv
                 if (rd==0) {
@@ -384,6 +460,17 @@ int Machine::eval() {
             instr  = "sw";
             cinstr = "c.swsp";
             break;
+#if XLEN == 64
+        case 0b111: // c.sdsp
+            uimm   = ((ir >> 1) & 0x1c0) | ((ir >> 7) & 0x38);
+            addr   = reg[2] + uimm;
+            target_write_uint64(addr, reg[rs2]);
+            r.pc   = pc+2;
+            ir     = ((uimm & 0xfe0) << 20) | (rs2 << 20) | (0x2 << 15) | (0b011 << 12) | ((uimm & 0x1f) << 7) | 0b0100011;
+            instr  = "sd";
+            cinstr = "c.sdsp";
+            break;
+#endif
         default:
             goto illegal_instr;
             break;
@@ -855,7 +942,7 @@ int Machine::eval() {
                 addr   = reg[rs1];
                 switch (funct3) {
                 case 0b010: // amo.w
-                    data = target_read_uint32(addr);
+                    data = (uint32_t)target_read_uint32(addr);
                     switch (funct5) {
                     case 0b00010: // lr.w
                         if (rs2!=0) {
@@ -919,7 +1006,7 @@ int Machine::eval() {
                     }
                     break;
                 case 0b011: // amo.d
-                    data = target_read_uint64(addr);
+                    data = (uint64_t)target_read_uint64(addr);
                     switch (funct5) {
                     case 0b00010: // lr.d
                         if (rs2!=0) {

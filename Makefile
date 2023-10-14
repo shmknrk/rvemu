@@ -5,7 +5,9 @@
 XLEN                := 64
 USE_MULDIV          := 1
 USE_ATOMIC          := 1
-#USE_COMPRESSED      := 1
+USE_COMPRESSED      := 1
+
+#SEPARATE_COMPILE    := 1
 
 #TRACE_RF            := 1
 #TRACE_RF_FILE       := trace_rf.txt
@@ -32,7 +34,7 @@ ifdef USE_COMPRESSED
 ARCH                := $(addsuffix c, $(ARCH))
 endif
 
-TARGET              := rvemu
+TARGET              := rvemu$(XLEN)
 
 #===============================================================================
 # Sources
@@ -77,19 +79,26 @@ endif
 .PHONY: default program
 default: $(TARGET)
 
+ifdef SEPARATE_COMPILE
 $(TARGET): $(OBJS)
-	$(CXX) $^ -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $^ -o $@
 
 .cpp.o:
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
+else
+$(TARGET): $(SRCS)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $^ -o $@
+
+endif
+
 #-------------------------------------------------------------------------------
 .PHONY: clean program_clean distclean
 clean:
-	rm -f $(SRC_DIR)/*.o
-	rm -f $(SRC_DIR)/*.d
+	rm -f $(shell find . -name "*.o")
+	rm -f $(shell find . -name "*.d")
 	rm -f a.out
-	rm -f $(TARGET)
+	rm -f rvemu rvemu32 rvemu64
 	rm -f *.txt
 
 program_clean:
@@ -144,19 +153,14 @@ rv64ua_tests        := \
 	amoadd_w amoand_w amomax_w amomaxu_w amomin_w amominu_w amoor_w amoxor_w amoswap_w \
 	lrsc
 
+rv64uc_tests        := \
+	rvc
+
 .PHONY: isa
-ifeq      ($(XLEN),32)
-isa: rv32ui_test
-isa: rv32um_test
-isa: rv32ua_test
-isa: rv32uc_test
-else ifeq ($(XLEN),64)
-isa: rv64ui_test
-isa: rv64um_test
-isa: rv64ua_test
-else
-$(error Error: Unsupported XLEN.)
-endif
+isa: rv$(XLEN)ui_test
+isa: rv$(XLEN)um_test
+isa: rv$(XLEN)ua_test
+isa: rv$(XLEN)uc_test
 
 # $(eval $(call riscv-tests-template,TVM))
 define riscv-tests-template
@@ -179,18 +183,10 @@ $$($1_tests): %: $1-p-%
 
 endef
 
-ifeq      ($(XLEN),32)
-$(eval $(call riscv-tests-template,rv32ui))
-$(eval $(call riscv-tests-template,rv32um))
-$(eval $(call riscv-tests-template,rv32ua))
-$(eval $(call riscv-tests-template,rv32uc))
-else ifeq ($(XLEN),64)
-$(eval $(call riscv-tests-template,rv64ui))
-$(eval $(call riscv-tests-template,rv64um))
-$(eval $(call riscv-tests-template,rv64ua))
-else
-$(error Error: Unsupported XLEN.)
-endif
+$(eval $(call riscv-tests-template,rv$(XLEN)ui))
+$(eval $(call riscv-tests-template,rv$(XLEN)um))
+$(eval $(call riscv-tests-template,rv$(XLEN)ua))
+$(eval $(call riscv-tests-template,rv$(XLEN)uc))
 
 #===============================================================================
 # CoreMark
